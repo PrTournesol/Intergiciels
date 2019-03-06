@@ -1,0 +1,46 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+</head>
+<body>
+<h1 id="tp-partage-dobjets-répartis-et-dupliqués-en-java">TP partage d’objets répartis et dupliqués en Java</h1>
+<p>Dans ce tp, on gère des données répliquées en utilisant de la diffusion de messages (write update).</p>
+<p>Une phase d'initialisation permet aux clients de se connaître. Ils s'échangent ensuite les mises à jours (write update) simplement en s'envoyant des messages UDP (supposés fiables mais non ordonnés). Le système est composé des classes suivantes :</p>
+<ul>
+<li><p><code>Launcher</code>/<code>LauncherImpl</code> est le serveur qui reçoit les abonnements des clients (par RMI). Un client qui s'abonne donne son nom de machine et son numéro de port, ainsi qu'une référence RMI pour être rappelé. Le serveur accumule les abonnements dans un objet group (<code>Group</code>), puis rappelle les clients pour leur donner une copie de cet objet group.</p></li>
+<li><p><code>Client</code>/<code>ClientImpl</code> est le programme exécuté par un client. Il s'abonne auprès du serveur et peut être rappelé par RMI par le serveur pour recevoir l'objet Group. Il crée deux activités : <code>Appli</code> qui implante le code de l'application (générer des mises à jour), et <code>Daemon</code> qui reçoit les mises à jour et les répercute dans la copie locale des données partagées.</p></li>
+<li><p><code>Group</code> est la classe qui permet d'envoyer des messages au groupe des clients. Son état inclut les destinations des clients (nom de machine / numéro de port) pour envoyer des messages aux clients.</p></li>
+<li><p><code>Target</code> est une classe définissant les destinations UDP (nom de machine / numéro de port).</p></li>
+<li><p><code>Update</code> est la classe définissant le format des messages échangés (des messages de mise à jour des données).</p></li>
+</ul>
+<p>Le fonctionnement du système est donc :</p>
+<ol style="list-style-type: decimal">
+<li>Le serveur (<code>LauncherImpl</code>) démarre;</li>
+<li>Des clients (<code>ClientImpl</code>) démarrent et s'enregistrent auprès du serveur (méthode RMI <code>Launcher.addClient</code>);</li>
+<li>Le serveur informe chaque client de l'ensemble des clients connus via l'appel RMI <code>Client.setGroup</code>, lequel initialise en plus l'activité de réception des messages UDP (classe <code>Daemon</code>) de chaque client;</li>
+<li>Le serveur demande à chaque client d'activer son code applicatif (méthode RMI <code>Client.start</code>);</li>
+<li>Le code applicatif de chaque client (classe <code>Appli</code>) émet des messages UDP avec des ordres de modifications sur les données, et en parallèle, le code de réception de chaque client reçoit et traite les messages UDP émis par les autres clients (classe <code>Daemon</code>);</li>
+<li>Le serveur demande à chaque client son tableau de valeur (méthode RMI <code>Client.getData</code>) et l'affiche.</li>
+</ol>
+<h2 id="etape-1">Etape 1</h2>
+<p>La première étape du TP est d'exécuter ce code :</p>
+<ul>
+<li><p><code>java LauncherImpl</code> : lancer le serveur</p></li>
+<li><p><code>java ClientImpl [&lt;machine serveur de nom&gt;] &lt;numero de port du client&gt;</code> : lancer un client. Le premier argument (optionnel) permet d'indiquer la machine ou se trouve le serveur. Le deuxième argument est le numéro de <em>port du client</em> pour les messages UDP.<br /> On peut tester en local ou en réparti, avec au moins deux clients.</p></li>
+<li><p><code>Launcher</code> ouvre une fenêtre avec deux boutons : une fois tous les clients démarrés, Go demande à tous les clients de s'exécuter, puis Print affiche en console l'état des données. Dans le code fourni, un message reçu est traité immédiatement. Vous devez donc observer que les données peuvent être incohérentes : tous les clients ont traités toutes les requêtes, mais pas nécessairement dans le même ordre.</p></li>
+</ul>
+<h2 id="etape-2">Etape 2</h2>
+<p>Dans la deuxième étape, on demande d'implanter un séquenceur pour garantir la cohérence des données partagées par réplication. Ceci consiste à :</p>
+<ul>
+<li><p>rajouter une méthode <code>getTicket</code> dans <code>Launcher</code> pour que les clients puissent demander un ticket (numéro de séquence) associé à chaque mise à jour, et permettant d'ordonner globalement celles-ci.</p></li>
+<li><p>modifier <code>Appli</code> pour qu'elle demande un numéro de séquence avant une écriture.</p></li>
+<li><p>modifier <code>Daemon</code> pour que lorsqu'on reçoit une modification, si c'est la prochaine, on l'applique et on essaie d'appliquer celles qui étaient en attente ; sinon on la met en attente.</p></li>
+</ul>
+<p>On peut alors vérifier qu'on a une gestion cohérente des données.</p>
+</body>
+</html>

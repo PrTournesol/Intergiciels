@@ -1,0 +1,9 @@
+main WARNING 2019-03-06 10:55:24,547, AgentServer#0, init()
+main WARNING 2019-03-06 10:55:24,554, Trying to find [a3cmlconfig] using sun.misc.Launcher$AppClassLoader@764c12b6 class loader.
+main WARNING 2019-03-06 10:55:24,554, Trying to find serialized config using ClassLoader.getSystemResource().
+main WARNING 2019-03-06 10:55:24,554, Unable to find configuration file: a3cmlconfig
+main WARNING 2019-03-06 10:55:24,554, AgentServer#0, serialized a3cmlconfig not found
+main WARNING 2019-03-06 10:55:24,629, Engine#0, factory created
+main WARNING 2019-03-06 10:55:24,629, AgentServer#0, initialized at Wed Mar 06 10:55:24 CET 2019
+main WARNING 2019-03-06 10:55:24,635, AgentServer#0, start()
+main WARNING 2019-03-06 10:55:24,766, AgentServer#0, started at Wed Mar 06 10:55:24 CET 2019

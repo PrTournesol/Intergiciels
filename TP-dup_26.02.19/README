@@ -1,0 +1,90 @@
+
+TP partage d’objets répartis et dupliqués en Java
+=================================================
+
+Dans ce tp, on gère des données répliquées en utilisant de la diffusion de
+messages (write update).
+
+Une phase d'initialisation permet aux clients de se connaître. Ils
+s'échangent ensuite les mises à jours (write update) simplement en
+s'envoyant des messages UDP (supposés fiables mais non ordonnés). Le système
+est composé des classes suivantes :
+
+- `Launcher`/`LauncherImpl` est le serveur qui reçoit les abonnements des
+  clients (par RMI). Un client qui s'abonne donne son nom de machine et son
+  numéro de port, ainsi qu'une référence RMI pour être rappelé. Le serveur
+  accumule les abonnements dans un objet group (`Group`), puis rappelle les
+  clients pour leur donner une copie de cet objet group.
+
+- `Client`/`ClientImpl` est le programme exécuté par un client. Il s'abonne
+  auprès du serveur et peut être rappelé par RMI par le serveur pour
+  recevoir l'objet Group. Il crée deux activités : `Appli` qui implante le
+  code de l'application (générer des mises à jour), et `Daemon` qui reçoit
+  les mises à jour et les répercute dans la copie locale des données
+  partagées.
+
+- `Group` est la classe qui permet d'envoyer des messages au groupe des
+  clients. Son état inclut les destinations des clients (nom de machine /
+  numéro de port) pour envoyer des messages aux clients.
+
+- `Target` est une classe définissant les destinations UDP (nom de machine /
+  numéro de port).
+
+- `Update` est la classe définissant le format des messages échangés (des
+  messages de mise à jour des données).
+
+Le fonctionnement du système est donc :
+
+1. Le serveur (`LauncherImpl`) démarre;
+2. Des clients (`ClientImpl`) démarrent et s'enregistrent auprès du serveur
+   (méthode RMI `Launcher.addClient`);
+3. Le serveur informe chaque client de l'ensemble des clients connus via
+   l'appel RMI `Client.setGroup`, lequel initialise en plus l'activité de
+   réception des messages UDP (classe `Daemon`) de chaque client;
+4. Le serveur demande à chaque client d'activer son code applicatif (méthode
+   RMI `Client.start`);
+5. Le code applicatif de chaque client (classe `Appli`) émet des messages
+   UDP avec des ordres de modifications sur les données, et en parallèle, le
+   code de réception de chaque client reçoit et traite les messages UDP émis
+   par les autres clients (classe `Daemon`);
+6. Le serveur demande à chaque client son tableau de valeur (méthode RMI
+   `Client.getData`) et l'affiche.
+
+Etape 1
+-------
+
+La première étape du TP est d'exécuter ce code :
+
+- `java LauncherImpl` : lancer le serveur
+
+- `java ClientImpl [<machine serveur de nom>] <numero de port du client>` :
+   lancer un client. Le premier argument (optionnel) permet d'indiquer la
+   machine ou se trouve le serveur. Le deuxième argument est le numéro de
+   *port du client* pour les messages UDP.  
+   On peut tester en local ou en réparti, avec au moins deux clients.
+
+- `Launcher` ouvre une fenêtre avec deux boutons : une fois tous les clients
+   démarrés, Go demande à tous les clients de s'exécuter, puis Print affiche en
+   console l'état des données. Dans le code fourni, un message reçu est
+   traité immédiatement. Vous devez donc observer que les données peuvent
+   être incohérentes : tous les clients ont traités toutes les requêtes,
+   mais pas nécessairement dans le même ordre.
+
+Etape 2
+-------
+
+Dans la deuxième étape, on demande d'implanter un séquenceur pour garantir
+la cohérence des données partagées par réplication. Ceci consiste à :
+
+- rajouter une méthode `getTicket` dans `Launcher` pour que les clients
+  puissent demander un ticket (numéro de séquence) associé à chaque mise à
+  jour, et permettant d'ordonner globalement celles-ci.
+
+- modifier `Appli` pour qu'elle demande un numéro de séquence avant une
+  écriture.
+
+- modifier `Daemon` pour que lorsqu'on reçoit une modification, si c'est la
+  prochaine, on l'applique et on essaie d'appliquer celles qui étaient en
+  attente ; sinon on la met en attente.
+
+On peut alors vérifier qu'on a une gestion cohérente des données.
